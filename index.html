@@ -381,7 +381,7 @@ function setLock(){locked=!locked;var l=$('#lk');if(l){l.innerHTML=ic(locked?'un
 function qa(t){if(t.closest('[data-login]')){location.href=API+'/login';return true}if(t.closest('#logout')){api('/logout',{method:'POST'}).catch(function(){}).then(function(){try{localStorage.removeItem('sg_token')}catch(e){}location.reload()});return true}var a=t.closest('[data-act]'),f=t.closest('[data-f]');
  if(f){af=f.dataset.f;$$('[data-f]').forEach(function(c){c.classList.toggle('on',c===f)});af2();return true}
  if(t.closest('#qlock')||t.closest('#lk')){if(confirm(locked?'Unlock the server?':'Lock all public channels?')){setLock();toast('Design preview: lockdown is not connected yet.')}return true}
- if(t.closest('#vpub')){saveCfg(true);return true}if(t.closest('#qpause')){paused=!paused;t=$('#qpause');t.innerHTML=ic(paused?'play':'pause')+(paused?' Resume protection':' Pause protection');t.classList.toggle('on',paused);$('#pp').hidden=!paused;toast('Design preview: not connected yet.');return true}
+ if(t.closest('#vpub')||t.closest('#tpub')){saveCfg(true);return true}if(t.closest('#retry')){loadGuild();return true}if(t.closest('#qpause')){paused=!paused;t=$('#qpause');t.innerHTML=ic(paused?'play':'pause')+(paused?' Resume protection':' Pause protection');t.classList.toggle('on',paused);$('#pp').hidden=!paused;toast('Design preview: not connected yet.');return true}
  if(a){var k=a.dataset.act;if((k==='kick'||k==='ban')&&!confirm('Really '+k+' this member?'))return true;if(k==='close'){if(!confirm('Close this ticket?'))return true;a.closest('.row').remove()}toast('Design preview: "'+k+'" is not connected yet.');return true}
  return false}
 var API='https://safety-guard-api.makinator678.workers.dev',S={token:null,me:null,gid:null,cfg:{},meta:null};
@@ -390,7 +390,7 @@ function api(r,o){o=o||{};o.headers={'Authorization':'Bearer '+S.token,'Content-
 function live(){return!!(S.token&&S.gid&&S.me)}
 function tgk(l,on,k){return'<label class="sw"><span><b>'+l+'</b></span><input type="checkbox" data-k="'+k+'"'+(on?' checked':'')+'><i></i></label>'}
 function slk(l,o,v,k){return'<div class="f"><label>'+l+'</label><select class="in" data-k="'+k+'">'+o.map(function(x){return'<option value="'+esc(x[0])+'"'+(x[0]===v?' selected':'')+'>'+esc(x[1])+'</option>'}).join('')+'</select></div>'}
-function chOpts(){return[['','— none —']].concat((S.meta&&S.meta.channels||[]).filter(function(x){return x.type===0||x.type===5}).map(function(x){return[x.id,'#'+x.name]}))}
+function chOpts(){return[['',S.meta?'— none —':'— bot has not synced this server yet —']].concat((S.meta&&S.meta.channels||[]).filter(function(x){return x.type===0||x.type===5}).map(function(x){return[x.id,'#'+x.name]}))}
 var EVT=[['messages','Deleted / edited messages'],['joins','Joins and leaves'],['bans','Bans and unbans'],['timeouts','Timeouts'],['roles','Role changes, role create / delete'],['channels','Channel create / delete']];
 setM('logs',function(){if(!live())return O.logs();var L=S.cfg.logs||{},e=L.events||{};
  return card('Log channel','Connected · changes reach the bot within ~30 s.',slk('Send logs to',chOpts(),L.channelId||'','logs.channel')+EVT.map(function(v){return tgk(v[1],e[v[0]]!==false,'logs.ev.'+v[0])}).join(''))});
@@ -400,15 +400,20 @@ function collect(pub){var c={};$$('[data-k]',pan).forEach(function(el){var p=el.
  if(m==='logs'){c.logs.events=c.logs.events||{};if(f==='channel')c.logs.channelId=v||null;else c.logs.events[f.slice(3)]=v}
  else if(m==='antilink'){c.antilink[f==='domains'?'allowedDomains':f]=f==='domains'?v.split(',').map(function(x){return x.trim()}).filter(Boolean):f==='days'?parseInt(v,10):v}
  else if(m==='verify'){var k={channel:'channelId',role:'roleId',max:'maxAttempts'}[f]||f;c.verify[k]=(f==='channel'||f==='role')?(v||null):(f==='max'||f==='cooldown')?parseInt(v,10):f==='color'?(HEX.test(v.trim())?fix(v.trim()):''):v}
- else if(m==='antimention'){c.antimention[f]=f==='limit'?parseInt(v,10):v}});
- if(pub&&c.verify)c.verify.publish=true;return c}
-function saveCfg(pub){if(!live()||['logs','links','verify','mention'].indexOf(cur)<0){bar.classList.remove('on');toast('Design preview: this module is not connected yet.');return}
+ else if(m==='antimention'){c.antimention[f]=f==='limit'?parseInt(v,10):v}
+ else if(m==='tickets'){var tk=c.tickets,kk=el.dataset.k;if(kk==='tickets.category')tk.categoryId=v||null;else if(kk==='tickets.panelch')tk.panelChannelId=v||null;else if(kk==='tickets.logch')tk.logChannelId=v||null;else{tk[p[1]]=tk[p[1]]||{};tk[p[1]][p[2]]=p[2]==='color'?(HEX.test(v.trim())?fix(v.trim()):''):v}}});
+ if(c.tickets)c.tickets.supportRoleIds=$$('.chip.on[data-role]',pan).map(function(x){return x.dataset.role});
+ if(pub&&c.verify)c.verify.publish=true;if(pub&&c.tickets)c.tickets.publish=true;return c}
+function saveCfg(pub){if(!live()||['logs','links','verify','mention','tickets'].indexOf(cur)<0){bar.classList.remove('on');toast('Design preview: this module is not connected yet.');return}
  api('/guild/'+S.gid+'/config',{method:'PUT',body:JSON.stringify(collect(pub))}).then(function(c){S.cfg=c;bar.classList.remove('on');toast(pub?'Saved ✓ The panel is posted within ~30 s.':'Saved ✓ The bot applies it within ~30 s.')}).catch(function(e){toast('Save failed: '+e.message)})}
-function loadGuild(){if(!S.gid)return render(cur);var nul=function(){return null};Promise.all([api('/guild/'+S.gid+'/config'),api('/guild/'+S.gid+'/meta'),api('/guild/'+S.gid+'/state').catch(nul),api('/guild/'+S.gid+'/audit').catch(nul)]).then(function(r){S.cfg=r[0]||{};S.meta=r[1];S.state=r[2];S.audit=r[3]||[];$('#qlock').hidden=true;$('#qpause').hidden=true;var on=S.state&&Date.now()-S.state.at<8*60000,p=$('.dtop .pill');p.textContent=on?'● Bot online':'● Bot offline?';p.className='pill'+(on?'':' off');render(cur)}).catch(function(e){toast('Load failed: '+e.message)})}
+var LG=0;
+function loadGuild(){if(!S.gid)return render(cur);var seq=++LG,nul=function(){return null};S.cfg={};S.meta=null;S.state=null;S.audit=[];pan.innerHTML='<div class="card"><p class="d" style="margin:0">Loading server…</p></div>';
+ Promise.all([api('/guild/'+S.gid+'/config'),api('/guild/'+S.gid+'/meta'),api('/guild/'+S.gid+'/state').catch(nul),api('/guild/'+S.gid+'/audit').catch(nul)]).then(function(r){if(seq!==LG)return;S.cfg=r[0]||{};S.meta=r[1];S.state=r[2];S.audit=r[3]||[];$('#qlock').hidden=true;$('#qpause').hidden=true;var on=S.state&&Date.now()-S.state.at<8*60000,p=$('.dtop .pill');p.textContent=on?'● Bot online':'● Bot offline?';p.className='pill'+(on?'':' off');render(cur)})
+ .catch(function(e){if(seq!==LG)return;pan.innerHTML=card('Could not load this server','Error: '+esc(e.message)+'. Try again in a moment.','<button class="btn" id="retry" type="button" style="margin-top:10px">Retry</button>')})}
 function boot(go){api('/me').then(function(me){S.me=me;var ok=me.guilds.filter(function(g){return g.botIn});S.gid=ok.length?ok[0].id:null;
  $('#srv').innerHTML=me.guilds.length?me.guilds.map(function(g){return'<option value="'+g.id+'"'+(g.botIn?'':' disabled')+(g.id===S.gid?' selected':'')+'>'+esc(g.name)+(g.botIn?'':' (bot not added)')+'</option>'}).join(''):'<option>No servers</option>';
  var b=$('.header-signin');b.textContent=me.username;b.removeAttribute('data-auth');b.dataset.go='dash';$('#logout').hidden=false;$('.dtop .pill').textContent='● Connected';
- $('#dashView .preview-note').innerHTML='<span>ⓘ</span><span><b>Live:</b> Overview, Audit log, Logs, Anti-Link, CAPTCHA and Anti-Mention are connected. Other settings are still a design preview.</span>';
+ $('#dashView .preview-note').innerHTML='<span>ⓘ</span><span><b>Live:</b> Overview, Audit log, Logs, Anti-Link, CAPTCHA, Tickets and Anti-Mention are connected. Other settings are still a design preview.</span>';
  if(!S.gid)toast('Add the bot to one of your servers first.');if(go)view('dash');loadGuild()}).catch(function(e){if(e.message==='expired')toast('Session expired. Sign in again.')})}
 $('#srv').addEventListener('change',function(){if(!S.me)return;S.gid=this.value;loadGuild()});
 try{var th=location.hash.match(/^#token=([A-Za-z0-9_-]{20,80})/);if(th){localStorage.setItem('sg_token',th[1]);history.replaceState(null,'',location.pathname+location.search)}S.token=localStorage.getItem('sg_token');if(S.token)boot(!!th)}catch(e){}
@@ -436,46 +441,19 @@ function rgk(l,v,a,b,u,k){return'<div class="f"><label>'+l+' <em>'+v+u+'</em></l
 var VT='Vítej na serveru!\n\nPro získání role **Verified** musíš vyřešit jednoduchou CAPTCHA hádanku.\n\nKlikni na tlačítko níže a pokračuj v ověřování.';
 function roleOpts(){return[['','— choose a role —']].concat((S.meta&&S.meta.roles||[]).map(function(x){return[x.id,x.name]}))}
 var Ov=O2.verify,Om=O2.mention,Oa=O2.antibot;
-setM('verify',function(){if(!live())return Ov();var V=S.cfg.verify||{};
- return card('CAPTCHA verification','Connected · new members solve a puzzle to get the role. Max attempts and cooldown apply right after saving.',slk('Verification channel',chOpts(),V.channelId||'','verify.channel')+slk('Role after success',roleOpts(),V.roleId||'','verify.role')+rgk('Max failed attempts',V.maxAttempts||3,1,10,'','verify.max')+rgk('Cooldown after failures',V.cooldown||5,1,60,' min','verify.cooldown'))+
+setM('verify',function(){if(!live())return Ov();var lv=S.state&&S.state.local&&S.state.local.verify,V=S.cfg.verify||(lv&&!lv.none?lv:{});
+ return card('CAPTCHA verification',(V.roleId?'Already set up on this server — you can change it below. ':'No CAPTCHA panel found yet. ')+'Max attempts and cooldown apply right after saving.',slk('Verification channel',chOpts(),V.channelId||'','verify.channel')+slk('Role after success',roleOpts(),V.roleId||'','verify.role')+rgk('Max failed attempts',V.maxAttempts||3,1,10,'','verify.max')+rgk('Cooldown after failures',V.cooldown||5,1,60,' min','verify.cooldown'))+
  card('Verify panel','Edit the message, then publish it into the channel above. The bot posts a new panel (delete the old one yourself).',embk(V.title||'🔐 Bezpečnostní ověření',V.text||VT,V.color||'#5865F2')+'<button class="btn" id="vpub" type="button" style="width:100%;margin-top:14px">Save &amp; publish panel</button>')});
 setM('mention',function(){if(!live())return Om();var A=S.cfg.antimention||{enabled:false,limit:5};
  return card('Mention limits','Connected · moderators are exempt.',tgk('Enable anti-mention',A.enabled,'antimention.enabled')+rgk('Max mentions per message',A.limit,2,25,'','antimention.limit')+'<div class="hint">Timeout is fixed at 10 min. @everyone / @here from regular members is always blocked when enabled.</div>')});
 setM('antibot',function(){if(!live())return Oa();var on=S.state&&S.state.modules&&S.state.modules.antibot;
  return card('Bot protection','','<div class="row"><span>Status</span>'+pl(on===undefined?null:on)+'</div><div class="hint">Only the server owner or the main user can change this, using /antibot in Discord. It is intentionally not editable from the dashboard.</div>')});
 LM.push('verify','mention','antibot');
-var cur='overview',dv=$('#dashView'),pan=$('#dpanel'),nav=$('#dnav'),bar=$('#savebar'),locked=false;
-function toast(t){var e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(function(){e.classList.remove('show')},3200)}
-function render(id){cur=id;var m=M.filter(function(x){return x[0]===id})[0];
- nav.innerHTML=M.map(function(x){return'<button type="button" data-m="'+x[0]+'" class="'+(x[0]===id?'on':'')+'"><span class="ico">'+ic(x[0])+'</span>'+x[2]+'</button>'}).join('');
- pan.innerHTML='<div class="ph"><h3><span class="hico">'+ic(id)+'</span>'+m[2]+'</h3><p>'+m[3]+'</p></div>'+(live()&&LM.indexOf(id)<0?NOTE:'')+m[4]();bar.classList.remove('on');
- var b=$('button.on',nav);if(b&&b.scrollIntoView)b.scrollIntoView({block:'nearest',inline:'center'})}
-function dirty(){bar.classList.add('on')}
-function view(v){var d=v==='dash';$('main').hidden=d;dv.hidden=!d;if(d&&!pan.innerHTML)render('overview');
- $$('#drawer a[data-go]').forEach(function(a){a.classList.toggle('on',a.dataset.go===v)});menu(false);window.scrollTo(0,0)}
-function menu(o){$('#drawer').classList.toggle('on',o);$('#dbg').hidden=!o;$('#burger').setAttribute('aria-expanded',o);$('#drawer').setAttribute('aria-hidden',!o)}
-var HEX=/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
-function fix(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(function(c){return c+c}).join('');return'#'+h}
-document.addEventListener('click',function(e){var t=e.target;
- if(t.closest('#burger')){menu(!$('#drawer').classList.contains('on'));return}
- if(t.id==='dbg'){menu(false);return}
- if(qa(t))return;var g=t.closest('[data-go]');if(g){e.preventDefault();view(g.dataset.go);return}
- var a=t.closest('a[href^="#"]');if(a&&a.getAttribute('href').length>1){if(!dv.hidden)view('home');else menu(false)}
- var n=t.closest('[data-m]');if(n){render(n.dataset.m);return}
- var c=t.closest('.chip');if(c){c.classList.toggle('on');dirty();return}
- if(0){locked=!locked;t.textContent=locked?'🔓 Unlock server':'🔒 Lock server';var p=$('#lkp');p.textContent=locked?'● LOCKED':'● Unlocked';p.className='pill'+(locked?' off':'');toast('Design preview: lockdown is not connected yet.');return}
- if(t.id==='save'){saveCfg();return}
- if(t.id==='reset'){render(cur);return}
- if(t.closest('.mini')&&t.closest('.row'))toast('Design preview: not connected yet.')});
-document.addEventListener('keydown',function(e){if(e.key==='Escape')menu(false)});
-pan.addEventListener('input',function(e){var t=e.target,eb=t.closest('.eb');if(t.id==='msearch'||t.id==='asearch')return sf(t);dirty();
- if(t.type==='range'){var em=t.parentNode.querySelector('em');if(em)em.textContent=t.value+(t.dataset.u||'')}
- if(!eb)return;var ins=$$('.in',eb),hx=ins[2],col=$('input[type=color]',eb),pv=$('.pv',eb);
- if(t.type==='color'){hx.value=t.value}
- var ok=HEX.test(hx.value.trim());hx.classList.toggle('bad',!ok);
- if(ok){var h=fix(hx.value.trim());pv.style.borderColor=h;if(t.type!=='color')col.value=h}
- $('b',pv).textContent=ins[0].value;$('p',pv).textContent=ins[1].value});
-pan.addEventListener('change',dirty);
-})();
-</script>
-</body></html>
+function embp(pre,t,d,c){return'<div class="eb"><div class="f"><label>Title</label><input class="in" data-k="'+pre+'.title" value="'+esc(t)+'"></div><div class="f"><label>Text</label><textarea class="in" rows="4" data-k="'+pre+'.text">'+esc(d)+'</textarea></div><div class="f"><label>Bar color (HEX)</label><div class="hex"><input type="color" value="'+c+'"><input class="in" data-k="'+pre+'.color" value="'+c+'" maxlength="7"></div></div><div class="pv" style="border-color:'+c+'"><b>'+esc(t)+'</b><p>'+esc(d)+'</p></div></div>'}
+function catOpts(){return[['','— choose a category —']].concat((S.meta&&S.meta.channels||[]).filter(function(x){return x.type===4}).map(function(x){return[x.id,x.name]}))}
+var Ot=O2.tickets;
+setM('tickets',function(){if(!live())return Ot();var T=S.cfg.tickets||(S.state&&S.state.local&&S.state.local.tickets)||{},tk=T.ticket||{},pn=T.panel||{},on=(T.supportRoleIds||[]),cnt=(S.state&&S.state.stats&&S.state.stats.openTickets)||0;
+ var rl=(S.meta&&S.meta.roles||[]).map(function(r){return'<button type="button" class="chip'+(on.indexOf(r.id)>-1?' on':'')+'" data-role="'+r.id+'">'+esc(r.name)+'</button>'}).join('')||'<span class="hint">No roles synced yet.</span>';
+ return card('Ticket system',(S.state&&S.state.modules&&S.state.modules.tickets?'Already set up on this server — you can change it below. ':'Not set up yet. ')+'Open tickets: '+cnt+'.',slk('Ticket category',catOpts(),T.categoryId||'','tickets.category')+'<div class="f"><label>Support roles (max 5)</label><div class="chips">'+rl+'</div></div>'+slk('Panel channel',chOpts(),T.panelChannelId||'','tickets.panelch')+slk('Log & transcript channel',chOpts(),T.logChannelId||'','tickets.logch'))+
+ card('Message inside ticket','Shown when a ticket opens. Use {user} to mention the author.',embp('tickets.ticket',tk.title||'🎫 Ticket vytvořen',tk.text||'Ahoj {user}!\n\nPopiš svůj problém a náš support tým ti odpoví.',tk.color||'#57F287'))+
+ card('Ticket panel','The message with the open button. Publish posts a new panel (delete the old one yourself).',embp('tickets
