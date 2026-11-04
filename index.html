@@ -128,6 +128,8 @@ input[type=range]{width:100%;accent-color:#8b5cf6}.hex{display:flex;gap:10px}.he
 .ph h3{display:flex;align-items:center;gap:12px}.hico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#7c3aed,#c084fc);color:#fff;box-shadow:0 8px 22px #7c3aed55}.hico .ic{width:20px;height:20px}
 .drawer a{display:flex;align-items:center;gap:12px}.drawer a .ic{color:#b78aff}.drawer a.on .ic{color:#fff}
 .mini{display:inline-flex;gap:6px;align-items:center}.mini .ic{width:15px;height:15px}.btn.danger{display:flex;align-items:center;justify-content:center;gap:8px}.row .ic{color:#ffb454;width:16px;height:16px;vertical-align:-3px}
+#signinForm,#registerForm,.overlay .or{display:none!important}
+.tabs{margin-bottom:14px}.m-legal{margin:14px 0 0;text-align:center;font-size:11px;color:#8f89a6;line-height:1.6}.m-legal a{color:#b78aff;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -205,7 +207,7 @@ input[type=range]{width:100%;accent-color:#8b5cf6}.hex{display:flex;gap:10px}.he
     <p id="authSub">Sign in to manage your Safety Guard servers.</p>
    </div>
 
-   <div class="preview-note"><span>ⓘ</span><span><b>Design preview.</b> Sign-in is not connected yet. Nothing you type here is sent or saved anywhere.</span></div>
+   <div class="preview-note"><span>ⓘ</span><span><b>Sign in with Discord.</b> Your account is created automatically the first time. We never see or store a password.</span></div>
 
    <div class="tabs" role="tablist">
     <button class="tab on" type="button" data-view="signin" role="tab">Sign in</button>
@@ -216,6 +218,7 @@ input[type=range]{width:100%;accent-color:#8b5cf6}.hex{display:flex;gap:10px}.he
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.7 5.3a18 18 0 0 0-4.5-1.4l-.6 1.2a16 16 0 0 0-5.2 0l-.6-1.2a18 18 0 0 0-4.5 1.4C1.5 9.4.7 13.4 1.1 17.4a18 18 0 0 0 5.5 2.8l1.2-2a11 11 0 0 1-1.9-.9l.5-.4a13 13 0 0 0 11.2 0l.5.4a11 11 0 0 1-1.9.9l1.2 2a18 18 0 0 0 5.5-2.8c.5-4.6-.8-8.5-3.2-12.1ZM8.8 14.8c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm6.4 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z"/></svg>
     <span id="discordLabel">Continue with Discord</span>
    </button>
+   <p class="m-legal">By continuing you agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
    <div class="or">OR WITH EMAIL</div>
 
    <form id="signinForm" novalidate autocomplete="off">
@@ -276,8 +279,8 @@ function view(n){
  conf.hidden=true;main.hidden=false;
  Object.keys(forms).forEach(function(k){forms[k].hidden=k!==n;err(forms[k],'')});
  tabs.forEach(function(t){t.classList.toggle('on',t.dataset.view===n)});
- if(n==='signin'){title.textContent='Welcome back';sub.textContent='Sign in to manage your Safety Guard servers.';dl.textContent='Continue with Discord'}
- else{title.textContent='Create your account';sub.textContent='Set up Safety Guard for your server in a minute.';dl.textContent='Sign up with Discord'}
+ if(n==='signin'){title.textContent='Welcome back';sub.textContent='Sign in with your Discord account to manage your servers.';dl.textContent='Continue with Discord'}
+ else{title.textContent='Create your account';sub.textContent='Your account is created automatically the first time you sign in with Discord.';dl.textContent='Sign up with Discord'}
  resetCap();
 }
 function open(n){last=document.activeElement;ov.hidden=false;document.body.style.overflow='hidden';view(n||'signin');
@@ -408,7 +411,7 @@ function saveCfg(pub){if(!live()||['logs','links','verify','mention','tickets'].
  api('/guild/'+S.gid+'/config',{method:'PUT',body:JSON.stringify(collect(pub))}).then(function(c){S.cfg=c;bar.classList.remove('on');toast(pub?'Saved ✓ The panel is posted within ~30 s.':'Saved ✓ The bot applies it within ~30 s.')}).catch(function(e){toast('Save failed: '+e.message)})}
 var LG=0;
 function loadGuild(){if(!S.gid)return render(cur);var seq=++LG,nul=function(){return null};S.cfg={};S.meta=null;S.state=null;S.audit=[];pan.innerHTML='<div class="card"><p class="d" style="margin:0">Loading server…</p></div>';
- Promise.all([api('/guild/'+S.gid+'/config'),api('/guild/'+S.gid+'/meta'),api('/guild/'+S.gid+'/state').catch(nul),api('/guild/'+S.gid+'/audit').catch(nul)]).then(function(r){if(seq!==LG)return;S.cfg=r[0]||{};S.meta=r[1];S.state=r[2];S.audit=r[3]||[];$('#qlock').hidden=true;$('#qpause').hidden=true;var on=S.state&&Date.now()-S.state.at<8*60000,p=$('.dtop .pill');p.textContent=on?'● Bot online':'● Bot offline?';p.className='pill'+(on?'':' off');render(cur)})
+ Promise.all([api('/guild/'+S.gid+'/config'),api('/guild/'+S.gid+'/meta'),api('/guild/'+S.gid+'/state').catch(nul),api('/guild/'+S.gid+'/audit').catch(nul)]).then(function(r){if(seq!==LG)return;S.cfg=r[0]||{};S.meta=r[1];S.state=r[2];S.audit=r[3]||[];$('#qlock').hidden=true;$('#qpause').hidden=true;var on=S.state&&Date.now()-S.state.at<12*60000,p=$('.dtop .pill');p.textContent=on?'● Bot online':'● Bot offline?';p.className='pill'+(on?'':' off');render(cur)})
  .catch(function(e){if(seq!==LG)return;pan.innerHTML=card('Could not load this server','Error: '+esc(e.message)+'. Try again in a moment.','<button class="btn" id="retry" type="button" style="margin-top:10px">Retry</button>')})}
 function boot(go){api('/me').then(function(me){S.me=me;var ok=me.guilds.filter(function(g){return g.botIn});S.gid=ok.length?ok[0].id:null;
  $('#srv').innerHTML=me.guilds.length?me.guilds.map(function(g){return'<option value="'+g.id+'"'+(g.botIn?'':' disabled')+(g.id===S.gid?' selected':'')+'>'+esc(g.name)+(g.botIn?'':' (bot not added)')+'</option>'}).join(''):'<option>No servers</option>';
@@ -454,6 +457,4 @@ function catOpts(){return[['','— choose a category —']].concat((S.meta&&S.me
 var Ot=O2.tickets;
 setM('tickets',function(){if(!live())return Ot();var T=S.cfg.tickets||(S.state&&S.state.local&&S.state.local.tickets)||{},tk=T.ticket||{},pn=T.panel||{},on=(T.supportRoleIds||[]),cnt=(S.state&&S.state.stats&&S.state.stats.openTickets)||0;
  var rl=(S.meta&&S.meta.roles||[]).map(function(r){return'<button type="button" class="chip'+(on.indexOf(r.id)>-1?' on':'')+'" data-role="'+r.id+'">'+esc(r.name)+'</button>'}).join('')||'<span class="hint">No roles synced yet.</span>';
- return card('Ticket system',(S.state&&S.state.modules&&S.state.modules.tickets?'Already set up on this server — you can change it below. ':'Not set up yet. ')+'Open tickets: '+cnt+'.',slk('Ticket category',catOpts(),T.categoryId||'','tickets.category')+'<div class="f"><label>Support roles (max 5)</label><div class="chips">'+rl+'</div></div>'+slk('Panel channel',chOpts(),T.panelChannelId||'','tickets.panelch')+slk('Log & transcript channel',chOpts(),T.logChannelId||'','tickets.logch'))+
- card('Message inside ticket','Shown when a ticket opens. Use {user} to mention the author.',embp('tickets.ticket',tk.title||'🎫 Ticket vytvořen',tk.text||'Ahoj {user}!\n\nPopiš svůj problém a náš support tým ti odpoví.',tk.color||'#57F287'))+
- card('Ticket panel','The message with the open button. Publish posts a new panel (delete the old one yourself).',embp('tickets
+ return card('Ticket system',(S.state&&S.state.modules&&S.state.modules.tickets?'Already set up on this server — you can change it below. ':'Not set up yet. ')+'Open tickets: '+cnt+'.',slk('Ticket category',catOpts(),T.categoryId||'','tickets.category')+'<div class="f"><label>Support roles (max 5)</label><div class="chips">'+rl+'</div></div>'+slk('Panel channel',chO
